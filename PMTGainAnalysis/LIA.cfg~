@@ -1,0 +1,19 @@
+# Space for commenting
+# Be sure to add 1-space after ":"
+#
+# Parameter List (Order does not matter):
+#
+# Path_to_PulseCruncher: 
+# Path_to_H5_to_ROOT_Converter:
+# Path_to_Raw_Waveform_File: 
+# PulseCrunched_File_Name: 
+# Number_of_Channel:
+# Path_to_LIAnalysis_Output: 
+
+
+Path_to_PulseCruncher: /cmn/prospect/PROSPECT2x_Analysis/PulseCruncher/./PulseCruncher
+Path_to_H5_to_ROOT_Converter: ../../Examples/./DetPulse_HDF5_to_ROOT
+Path_to_Raw_Waveform_File: /projects/prospect/converted_data/Unpacked/P50X/series015/s015_f00011_ts1500965665_Unpacked.root
+PulseCrunched_File_Name: P50X_s015_f11B_Wet_Pulse.h5
+Number_of_Channel: 5
+Path_to_LIAnalysis_Output: ~/LIAnalysis/series015/
