@@ -2,37 +2,28 @@
  * Contains PMTGain Analysis for Light Injection Module
  * Contains C++/CERN ROOT includes essentials and all macros
  * Date Created: Aug 28, 2017
- * Date Last Modified: Sep 11, 2017
+ * Date Last Modified: Dec 16, 2017
  */
 
-#ifndef GMacros_HH
-#define GMacros_HH
+#include "GainAnalysis.hh"
 
-#include"LIParameterAnalyzer.hh"
-
-//Area Extraction/Pulse filter module
-void ExtractArea(string SLFile, string LIOutputPathName, int iCHinput){
-  //Reset CERN Root
-  gROOT->Reset();
-
-  //Open the file and call in the Unpacked Tree
-  TFile *ReadFile = TFile::Open(SLFile.c_str());
+void GainAnalysis::ExtractArea(string PC_Output, string Output_Dir, int Ch){
+  //Open PCOutput File and called in DetPulse Tree and gets all of its parameters
+  TFile *ReadFile = TFile::Open(PC_Output.c_str());
   TTree *ReadTree = (TTree*)ReadFile->Get("DetPulse");
-
-  int n = ReadTree->GetEntries();
-  int number_of_channels = iCHinput;
-  
+  int n = ReadTree->GetEntries();                        //Get the amount of entries
+  int number_of_channels = Ch;                           //Store the amount of Channels
+ 
   //path to output
   ostringstream AreaCH;
-  AreaCH << LIOutputPathName << "/AREA_CHANNEL.root";
+  AreaCH << Output_Dir << "/PulseArea.root";
   string AreaCHName = AreaCH.str();
-
   //Create a new Root file and a new tree for refernces
   TFile *WriteFile = new TFile(AreaCHName.c_str(),"RECREATE");
   TTree *WriteTree = new TTree("DATA","");
-  WriteTree->SetEntries(n/(number_of_channels-1));
-
-  //Declare a sample with an array corresponding to the amount of values in that array.
+  WriteTree->SetEntries(n/(number_of_channels-1));      //Ignore Trigger Channel
+  
+//Declare a sample with an array corresponding to the amount of values in that array.
   //Set the array to the branch of interested.
   float area=0;
   float baseline=0;
@@ -63,7 +54,7 @@ void ExtractArea(string SLFile, string LIOutputPathName, int iCHinput){
     for(int j = 0; j < n; j++) {
       ReadTree->GetEntry(j);
 
-      //Look for SPE trigger
+      //Look for SPE trigger (Filter System)
       evtmap = event;
       Dmap = detector;
       if (Dmap == 4) {
@@ -73,14 +64,13 @@ void ExtractArea(string SLFile, string LIOutputPathName, int iCHinput){
       else flag = 0;
       if (evtmap == evtprev) flag = 1 ;
 
-      //cout << evtmap << " " << Dmap << " " << flag <<  endl;
-
       if (flag == 1) {
         if(detector == l) {
           A = area;
           AreaBranch->Fill();
         }
       }
+      //Set Abitrary value for the filtered out value
       else if (flag == 0) {
         if(detector == l) {
           A = -100000;
@@ -96,8 +86,8 @@ void ExtractArea(string SLFile, string LIOutputPathName, int iCHinput){
   ReadFile->Close();
 }
 
-//PulseCrunched Fitting Module
-void PCFitting(string LIOutputPathName, int iCHinput){
+//Area Branch Fitting Module
+void GainAnalysis::SPEFit(string Output_Dir, int Ch){
   printf("SPE analysis***********************************\n");
   //setting up fitting function for SPE
   int range_low=-100, range_high=500;
@@ -112,7 +102,6 @@ void PCFitting(string LIOutputPathName, int iCHinput){
 
   //Recreate a fitting function
   TF1 *spectrumFunc = new TF1("spectrumFunc","([constant]*((1-[amp])*(TMath::Poisson(0,[occu])*Func0 + TMath::Poisson(1,[occu])*Func1 + TMath::Poisson(2,[occu])*Func2 +TMath::Poisson(3,[occu])*Func3+TMath::Poisson(4,[occu])*Func4+TMath::Poisson(5,[occu])*Func5) + [amp]*Func6))", range_low,range_high);
-
 
   //Extract pertient values from fitting function and set their limit
   float i_spesig = spectrumFunc->GetParNumber("spesig");
@@ -132,8 +121,8 @@ void PCFitting(string LIOutputPathName, int iCHinput){
 
   //path to oputput
   ostringstream AreaCH, HistoFile;
-  AreaCH << LIOutputPathName << "/AREA_CHANNEL.root";
-  HistoFile << LIOutputPathName << "/HISTOGRAM.root";
+  AreaCH << Output_Dir << "/PulseArea.root";
+  HistoFile << Output_Dir << "/Fitted_PulseArea.root";
   string AreaCHName = AreaCH.str();
   string HistoFileName = HistoFile.str();
 
@@ -143,10 +132,10 @@ void PCFitting(string LIOutputPathName, int iCHinput){
   TTree *ReadTree = (TTree*)ReadFile->Get("DATA");
 
   TFile *WriteFile = new TFile(HistoFileName.c_str(),"RECREATE");
-  TTree *WriteTree = new TTree("HISTOGRAM","");
+  TTree *WriteTree = new TTree("FittedArea","");
     
   int n = ReadTree->GetEntries();
-  int nchannels = iCHinput-1;
+  int nchannels = Ch-1;
 
   ofstream MOF;
   MOF.open("GMean.txt");
@@ -192,7 +181,7 @@ void PCFitting(string LIOutputPathName, int iCHinput){
 }
 
 //calculate PMTGain
-void CalcGain(string LIOutputPathName){
+void GainAnalysis::CalcGain(string Output_Dir){
   //Declaration of known variables
   float Digitizer_Max_Voltage = 2.0;  //Voltz
   float Digitizer_Bits_Use = pow(2,14);
@@ -215,7 +204,6 @@ void CalcGain(string LIOutputPathName){
   int i = 0;
   float PMTGain;
   while(!ReadFile.eof()) {
-    cout << i << endl;
     getline(ReadFile, line);
     float mean = strtof(line.c_str(),0);
     PMTGain = mean * GainScale;
@@ -226,17 +214,13 @@ void CalcGain(string LIOutputPathName){
   WriteFile.close();
   ReadFile.close();
 
-  //path to oputput
+  //path to oputput to output directory
   ostringstream StoreMeanOutput, StorePMTGain;
-  StoreMeanOutput << "mv GMean.txt " << LIOutputPathName; 
-  StorePMTGain << "mv PMTGain.txt " << LIOutputPathName;
+  StoreMeanOutput << "mv GMean.txt " << Output_Dir; 
+  StorePMTGain << "mv PMTGain.txt " << Output_Dir;
   string StoreMeanOutputName = StoreMeanOutput.str();
   string StorePMTGainName = StorePMTGain.str();
 
   system(StoreMeanOutputName.c_str());
   system(StorePMTGainName.c_str());
 }
-/****
-Code Graveyard
-****/
-#endif
