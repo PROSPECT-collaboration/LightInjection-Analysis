@@ -36,7 +36,7 @@ public:
   float eC;                       //Coulomb
   float time_per_sample;          //second
 
-  void CalcOccu(float, float); 
+  void CalcOccu(float); 
 };
 
 

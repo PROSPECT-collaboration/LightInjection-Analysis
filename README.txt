@@ -54,6 +54,10 @@ To make everything easy, change directory to Plotting
    b) .x PLOT_GAIN.cpp for Gain analysis
 
 
+CalcOccupancy Procedures:
+To make everything easy, change directory to CalcOccupancy first.
+1. Run ./CalcOccupancy and follow the prompt on terminal.
+
 
 
 Further questions?
