@@ -1,8 +1,13 @@
+Download The LightInjection-Analysis Package from GitHub using git clone <http link>
+Everything in the package are label accordingly
+
 TIMING ANALYSIS Procedures:
 To make everything easy, change directory to TimingAnalysis
 1. Run root -l
 
 2. Run .x TIMING_ANALYSIS_FULL_DETECTOR.cpp
+
+3. Follow TIMING_ANALYSIS Prompt to proceed
 
 3. Enjoy
 
@@ -17,8 +22,8 @@ Manual Steps:
 2. Change Parameters on PulseCruncher Config Files "LI_PulseCruncher.cfg"
 
 3. Edit Makefile to: 
-    Run PulseCrunhcer Job -> output to Pre-Output Dir 
-    Run .h5 to .root convertor -> output to Pre-Output Dir
+    Run PulseCrunhcer Job -> output to Output Dir 
+    Run .h5 to .root convertor -> output to Output Dir
 
 5. Combine Data Files: Copy and Paste ".root" Files in Output Dir to text file named "FileCombineList.txt" to combine step
 

@@ -20,6 +20,7 @@
 #include<fstream>
 using namespace std;
 
+//Checks at what time the integral of a pulse passes 20% of its total area
 double CHECKINTEGRAL(double integral, short samps[], int lower_integration_limit, int upper_integration_limit, double baseline)
 {
     double check_integral = 0;
@@ -43,7 +44,7 @@ double CHECKINTEGRAL(double integral, short samps[], int lower_integration_limit
     return 0;
 }
 
-//Maps channels in the same PMT group to be in succession
+//Maps channels in the same PMT group to be in succession (this is important for the relative timing to be correct)
 int CHANNELMAP(int real_channel, bool reverse)
 {
     int mapped_channel, reverse_mapped_channel;
@@ -125,7 +126,7 @@ int CHANNELMAP(int real_channel, bool reverse)
         mapped_channel = real_channel - 4;
         reverse_mapped_channel = real_channel - 24;
     }
-            
+    
     if(reverse)
     {
         return reverse_mapped_channel;
@@ -144,30 +145,42 @@ void TIMING_ANALYSIS_FULL_DETECTOR()
     
     string filename;
     
-    cout << "ENTER THE FILENAME FOR THE UNPACKED FILE: ";
+    cout << "ENTER THE NAME OF THE .txt FILE CONTAINING ALL FILE NAMES: ";
     cin >> filename;
     
-    //Open the file and call in the Unpacked Tree
-    TFile* ReadFile1 = TFile::Open(filename.c_str());
-    TTree* ReadTree1 = (TTree*)ReadFile1->Get("Waveforms");
-    int n = ReadTree1->GetEntries();
-    int number_of_samples, number_of_channels;
-    int triggerchannel = 4;
+    ifstream inputfile;
+    inputfile.open(filename);
+    string current_word;
+    TChain ReadTree1("Waveforms");
     
-    cout << "ENTER THE NUMBER OF SAMPLES FOR THE DESIRED DATA SET: ";
+    while(!inputfile.eof())
+    {
+        inputfile >> current_word;
+        ReadTree1.Add(current_word.c_str());
+    }
+    
+    //Open the file and call in the Unpacked Tree
+    int n = ReadTree1.GetEntries();
+    int number_of_samples, number_of_channels;
+    int triggerchannel;
+    
+    cout << "ENTER THE NUMBER OF SAMPLES PER WAVEFORM FOR THE DESIRED DATA SET: ";
     cin >> number_of_samples;
+    
+ //   cout << "ENTER THE CHANNEL NUMBER OF THE TRIGGER CHANNEL: ";
+ //   cin >> triggerchannel;
     
     short samps[number_of_samples];
     int chan;
-    ReadTree1->SetBranchAddress("samps", &samps);
-    ReadTree1->SetBranchAddress("chan", &chan);
+    ReadTree1.SetBranchAddress("samps", &samps);
+    ReadTree1.SetBranchAddress("chan", &chan);
     
     //check how many channels there are
     int channel = -1;
     int prev_channel;
     for(int o = 0; o <= n; o++)
     {
-        ReadTree1->GetEntry(o);
+        ReadTree1.GetEntry(o);
         prev_channel = channel;
         channel = chan;
         
@@ -195,7 +208,7 @@ void TIMING_ANALYSIS_FULL_DETECTOR()
     TFile* WriteFile = new TFile("TIMING.root","RECREATE");
     TTree* WriteTree = new TTree("DATA","");
     WriteTree->SetEntries(n/number_of_channels);
-
+    
     double time;
     double integral;
     double baseline;
@@ -208,9 +221,9 @@ void TIMING_ANALYSIS_FULL_DETECTOR()
     double rel_reftime;
     
     //This loop ensures that only when the trigger channel registers a trigger, will the timing be calculated
-    for(int i = 0; i < n; i++)
+  /*  for(int i = 0; i < n; i++)
     {
-        ReadTree1->GetEntry(i);
+        ReadTree1.GetEntry(i);
         integral = 0;
         counter = 0;
         baseline = 0;
@@ -235,19 +248,19 @@ void TIMING_ANALYSIS_FULL_DETECTOR()
                 trigger.push_back(i);
             }
         }
-    }
+    } */
     
     vector<double> abs_reference;
     vector<double> rel_reference;
     int referenceindex;
     int map;
-
+    
     for(int m = 0; m < number_of_channels; m++)
     {
-        if(CHANNELMAP(m,true) != triggerchannel)
-        {
+    //    if(CHANNELMAP(m,true) != triggerchannel)
+    //    {
             cout << "Processing data for channel " << CHANNELMAP(m,true) << endl;
-
+            
             ostringstream timebranch;
             timebranch << "timec" << CHANNELMAP(m,true);
             string timebranchname = timebranch.str();
@@ -260,12 +273,17 @@ void TIMING_ANALYSIS_FULL_DETECTOR()
             reltimebranch << "reltimec" << CHANNELMAP(m,true);
             string reltimebranchname = reltimebranch.str();
             
+            ostringstream areabranch;
+            areabranch << "areac" << CHANNELMAP(m,true);
+            string areabranchname = areabranch.str();
+            
             triggerindex = 0;
             referenceindex = 0;
             
             TBranch* TimeBranch = WriteTree->Branch(timebranchname.c_str(), &time);
             TBranch* RelTimeBranch = WriteTree->Branch(reltimebranchname.c_str(), &rel_timediff);
             TBranch* AbsTimeBranch = WriteTree->Branch(abstimebranchname.c_str(), &abs_timediff);
+            TBranch* AreaBranch = WriteTree->Branch(areabranchname.c_str(), & integral);
             
             if(((m % 8 == 0) && (CHANNELMAP(m,true) < 280)) || ((m % 4 == 0) && (CHANNELMAP(m,true) >= 280)))
             {
@@ -274,15 +292,15 @@ void TIMING_ANALYSIS_FULL_DETECTOR()
             
             for(int i = 0; i < n; i++)
             {
-                ReadTree1->GetEntry(i);
+                ReadTree1.GetEntry(i);
                 integral = 0;
                 counter = 0;
                 baseline = 0;
                 int min = 100000;
                 int peak_loc = 0;
-            
-                if(chan == CHANNELMAP(m,true) && i == (trigger[triggerindex] + chan - triggerchannel))
-                {
+                
+            //    if(chan == CHANNELMAP(m,true) && i == (trigger[triggerindex] + chan - triggerchannel))
+            //    {
                     //find integration and baseline calculation ranges
                     for(int j = 0; j < number_of_samples; j++)
                     {
@@ -292,27 +310,27 @@ void TIMING_ANALYSIS_FULL_DETECTOR()
                             peak_loc = j;
                         }
                     }
-                
+                    
                     lower_baseline_limit = peak_loc - 40;
                     upper_baseline_limit = peak_loc - 20;
                     lower_integration_limit = peak_loc - 10;
                     upper_integration_limit = peak_loc + 10;
-                
+                    
                     //calculate baseline
                     for(int j = lower_baseline_limit; j <= upper_baseline_limit; j++)
                     {
                         baseline += samps[j];
                         counter++;
                     }
-                
+                    
                     baseline = baseline/static_cast<double>(counter);
-                
+                    
                     //calculate integral
                     for(int j = lower_integration_limit; j <= upper_integration_limit; j++)
                     {
                         integral += (baseline - samps[j]);
                     }
-                
+                    
                     time = CHECKINTEGRAL(integral, samps, lower_integration_limit, upper_integration_limit, baseline)*4;
                     
                     
@@ -332,29 +350,31 @@ void TIMING_ANALYSIS_FULL_DETECTOR()
                     TimeBranch->Fill();
                     RelTimeBranch->Fill();
                     AbsTimeBranch->Fill();
+                    AreaBranch->Fill();
                     
                     triggerindex++;
                     referenceindex++;
-                }
+             //   }
                 
-                else if(chan == CHANNELMAP(m,true)) && i != (trigger[triggerindex] + chan - triggerchannel))
+             /*   else if(chan == CHANNELMAP(m,true)) && i != (trigger[triggerindex] + chan - triggerchannel))
                 {
                     time = -10000;
                     abs_timediff = -10000;
                     rel_timediff = -10000;
+                    integral = -10000;
                     
                     TimeBranch->Fill();
                     RelTimeBranch->Fill();
                     AbsTimeBranch->Fill();
+                    AreaBranch->Fill();
                 }
-            }
+            } */
         }
     }
     
     //Close the write/read file.
     WriteTree->Write();
     WriteFile->Close();
-    ReadFile1->Close();
     
     TFile* ReadFile2 = TFile::Open("TIMING.root");
     TTree* ReadTree2 = (TTree*)ReadFile2->Get("DATA");
@@ -365,12 +385,14 @@ void TIMING_ANALYSIS_FULL_DETECTOR()
     fout2.open("Mean_Difference_Total.txt");
     ofstream fout3;
     fout3.open("Mean_Difference_Cell_Group.txt");
+    ofstream fout4;
+    fout4.open("Mean_Pulse_Area.txt");
     
     int m = ReadTree2->GetEntries();
     
     int pulse_maxbin;
     double pulse_maxvalue, scale, mean;
-    double time_pulse, reltime_pulse, abstime_pulse;
+    double time_pulse, reltime_pulse, abstime_pulse, area_pulse;
     
     TFile *WriteFile2 = new TFile("HISTOGRAMS.root","RECREATE");
     TTree *WriteTree2 = new TTree("HISTOGRAMS","");
@@ -379,8 +401,8 @@ void TIMING_ANALYSIS_FULL_DETECTOR()
     {
         gROOT->Reset();
         
-        if(k != triggerchannel)
-        {
+       // if(k != triggerchannel)
+       // {
             ostringstream timebranch;
             timebranch << "timec" << CHANNELMAP(k,true);
             string timebranchname = timebranch.str();
@@ -392,15 +414,21 @@ void TIMING_ANALYSIS_FULL_DETECTOR()
             ostringstream reltimebranch;
             reltimebranch << "reltimec" << CHANNELMAP(k,true);
             string reltimebranchname = reltimebranch.str();
-        
+            
+            ostringstream areabranch;
+            areabranch << "areac" << CHANNELMAP(k,true);
+            string areabranchname = areabranch.str();
+            
             TH1F* time_hist = new TH1F("","",10000,0,number_of_samples*4);
             TH1F* abstime_hist = new TH1F("","",1000,-50,50);
             TH1F* reltime_hist = new TH1F("","",1000,-50,50);
-        
+            TH1F* area_hist = new TH1F("","",1000,0,100000);
+            
             ReadTree2->SetBranchAddress(timebranchname.c_str(), &time_pulse);
             ReadTree2->SetBranchAddress(reltimebranchname.c_str(), &reltime_pulse);
             ReadTree2->SetBranchAddress(abstimebranchname.c_str(), &abstime_pulse);
-        
+            ReadTree2->SetBranchAddress(areabranchname.c_str(), &area_pulse);
+            
             for(int i = 0; i < m; i++)
             {
                 ReadTree2->GetEntry(i);
@@ -408,26 +436,32 @@ void TIMING_ANALYSIS_FULL_DETECTOR()
                 time_hist->Fill(time_pulse);
                 abstime_hist->Fill(abstime_pulse);
                 reltime_hist->Fill(reltime_pulse);
+                area_hist->Fill(area_pulse);
+                
             }
             
             time_hist->SetTitle(timebranchname.c_str());
             abstime_hist->SetTitle(abstimebranchname.c_str());
             reltime_hist->SetTitle(reltimebranchname.c_str());
+            area_hist->SetTitle(areabranchname.c_str());
             
             time_hist->Write();
             reltime_hist->Write();
             abstime_hist->Write();
-        
+            area_hist->Write();
+            
             double mean = time_hist->GetMean(1);
             double sigma = time_hist->GetStdDev(1);
             double mean_absdiff = abstime_hist->GetMean(1);
             double mean_reldiff = reltime_hist->GetMean(1);
-
+            double mean_area = area_hist->GetMean(1);
+            
             fout1 << "PMTNumber: " << CHANNELMAP(k,true) << " PMTTimingMean: " << mean << endl;
             fout2 << "PMTNumber: " << CHANNELMAP(k,true) << " PMTTimingReferenceTotal: " << mean_absdiff << endl;
             fout3 << "PMTNumber: " << CHANNELMAP(k,true) << " PMTTimingReferenceCellGroup: " << mean_reldiff << endl;
-        
-        }
+            fout4 << "PMTNumber: " << CHANNELMAP(k,true) << " PulseArea: " << mean_area << endl;
+            
+       // }
     }
     
     WriteTree2->Write();
@@ -435,6 +469,7 @@ void TIMING_ANALYSIS_FULL_DETECTOR()
     fout1.close();
     fout2.close();
     fout3.close();
+    fout4.close();
     ReadFile2->Close();
 }
 
