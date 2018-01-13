@@ -54,7 +54,7 @@ void GainAnalysis::ExtractArea(string PC_Output, string Output_Dir, int Ch){
     for(int j = 0; j < n; j++) {
       ReadTree->GetEntry(j);
 
-      //Look for SPE trigger (Filter System)
+        //Look for SPE trigger (Filter System) (NOTE: Change this part for AD1)
       evtmap = event;
       Dmap = detector;
       if (Dmap == 4) {

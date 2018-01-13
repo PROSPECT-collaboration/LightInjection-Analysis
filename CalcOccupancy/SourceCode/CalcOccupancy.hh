@@ -6,10 +6,23 @@
 
 #ifndef CALCOCCUPANCY_HH
 #define CALCOCCUPANCY_HH
+//Root Class
+#include"TROOT.h"
+#include"TFile.h"
+#include"TObject.h"
+#include"TString.h"
+#include"TTree.h"
+#include"TH1.h"
+#include"TCanvas.h"
+#include"THistPainter.h"
+#include"TGraph.h"
 
+//C++ include
 #include <iostream>
 #include <cmath>
 #include <string>
+#include <fstream>
+#include <sstream>
 using namespace std;
 
 class CalcOccupancy{
@@ -24,6 +37,7 @@ public:
     Resistance = 50;                //Ohms
     eC = 1.6e-19;                   //Coulomb
     time_per_sample = 4e-9;         //second
+
   }
   //Destructor
   ~CalcOccupancy() {
@@ -36,7 +50,9 @@ public:
   float eC;                       //Coulomb
   float time_per_sample;          //second
 
-  void CalcOccu(float); 
+
+  float CalcOccu(float);
+  
 };
 
 
