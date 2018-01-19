@@ -30,7 +30,7 @@ Manual Steps:
 6. Single Data File: Follow Terminal Steps to choose whichever ".root" file desire for Gain Analysis.
 
 Automate Step:
-7. Run ./LIAnalysis <combine files? yes or no> 
+7. Run ./LIAnalysis <Output_Dir> <Number of Ch> <combine files? y or n> 
     If 5 is true (yes), LIAnalysis will combine files in FileCombineList.txt and then Proceed to GainAnalysis.
     If 5 is false (no), LIAnalysis will Proceed to GainAnalysis.
 

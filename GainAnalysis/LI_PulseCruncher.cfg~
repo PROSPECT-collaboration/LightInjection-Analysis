@@ -19,10 +19,10 @@ channel_types: {
       polarity = "negative"
       baseline_window_lo = -20
       baseline_window_hi = -10
-      integ_window_low = -8
-      integ_window_hi = 8
+      integ_window_low = -4
+      integ_window_hi = 4
       psd_divider = 5
-      peak_loc = 82
+      peak_loc = 20
       class = "FixedPulseAnalyzer"
   }
   trig: {

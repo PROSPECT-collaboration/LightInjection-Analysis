@@ -20,10 +20,10 @@ void GainAnalysis::ExtractArea(string PC_Output, string Output_Dir, int Ch){
   string AreaCHName = AreaCH.str();
   //Create a new Root file and a new tree for refernces
   TFile *WriteFile = new TFile(AreaCHName.c_str(),"RECREATE");
-  //TTree *WriteTree = new TTree("DATA","");
-  //WriteTree->SetEntries(n/(number_of_channels-1));      //Ignore Trigger Channel
+  TTree *WriteTree = new TTree("DATA","");
+  WriteTree->SetEntries(n/(number_of_channels-1));      //Ignore Trigger Channel
   
-  //Declare a sample with an array corresponding to the amount of values in that array.
+//Declare a sample with an array corresponding to the amount of values in that array.
   //Set the array to the branch of interested.
   float area=0;
   float baseline=0;
@@ -41,75 +41,53 @@ void GainAnalysis::ExtractArea(string PC_Output, string Output_Dir, int Ch){
   Long64_t evtmap=0, evtprev=0;
   float Amap=0;
   int Dmap=0;
+  int flag = 0;
+  int counter = 0;
 
-
-  //create a flag one of events (Filtering Flag system)
-  //THis is map to PulseCruncher output. Change this is PulseCruncher change somehow... always a good a idea to look at the .h5 files first
-
-  vector<long> Pulse;                           //initialize a trigger array
-  for (int p = 0; p < n; p++){                  //loop through each events in the file
-    ReadTree->GetEntry(p);             
-    evtmap = event;
-    Dmap = detector;
-    if (Dmap == -100) {                         //run to each set of PMT event to locate a counter, add a counter to Remember this event
-      evtprev = evtmap;
-      Pulse.push_back(event);
-      cout << Pulse.back() << endl;
-    }
-    //self-checking module 
-    //if (evtmap == evtprev) flag = 1 ;                   //if the next event is equal to the previous event flag = 1.
-    if ((evtmap == evtprev) && (Dmap == -100)) continue;  //Get rid of repeating -100 Ch
-  }
-  Dmap = 0;
-  evtmap = 0;
-  int w = 0;
-  int counter =0;
-  int range_low=-50, range_high=500;
-  TH1F *Areahis;
   //EXTRACT SPE PARAMETERS
   //Create all fillable histogram for each channel
-  //Change l range to that it would match the PMT of interest
   for(int l = 0; l < number_of_channels; l++) {
     ostringstream areabranch;
     areabranch << "areac" << l;
     string areabranchname = areabranch.str();
-    ostringstream his;
-    his << "his" << l;
-    string hisname = his.str();
+    TBranch *AreaBranch = WriteTree->Branch(areabranchname.c_str(), &A);
 
-    Areahis = new TH1F(hisname.c_str(),areabranchname.c_str(),100,range_low,range_high);
-    cout << "Begin Processing Events for Ch: " << l << endl;
-    cout << "[";
     for(int j = 0; j < n; j++) {
       ReadTree->GetEntry(j);
-<<<<<<< HEAD
-=======
-
-        //Look for SPE trigger (Filter System) (NOTE: Change this part for AD1)
+      //Look for SPE trigger (Filter System) (NOTE: Change this part for AD1)
       evtmap = event;
->>>>>>> origin/master
       Dmap = detector;
-      evtmap = event;
-      
-      if (Pulse[w] == evtmap) {
-        if(Dmap == l) {
-          //cout << Dmap << " " << A << endl;
+      if (Dmap == -100) {                                             //run to each set of PMT event to locate a counter, add a counter and turn flag on. Remember this event
+        evtprev = evtmap;
+        counter += 1;
+      }
+      //self-checking module 
+      //if (evtmap == evtprev) flag = 1 ;                             //if the next event is equal to the previous event flag = 1.
+      if ((evtmap != evtprev) && (counter == 1)) {                    //if the next event is not equal to the previous event but flag is 1, reset scan
+        n = n - number_of_channels;
+        flag = 1;
+      } else if (counter == 2){
+        flag = 0;
+        counter = 0;
+      }
+      if ((flag == 1) && (counter == 1)) {
+        if(detector == l) {
           A = area;
-          Areahis->Fill(A);
-          w++;
-          cout << "*";
-        } else continue;
-      } 
-    }      
-    Areahis->Write();
-    w = 0;
-    cout << "]" << endl;
-    cout << (l) << "/" << number_of_channels << endl;
+          AreaBranch->Fill();
+        }
+      }
+      //Set Abitrary value for the filtered out value
+      else if ((flag == 0) && (counter == 1) {
+        if(detector == l) {
+          A = -100000;
+          AreaBranch->Fill();
+        }
+      }else continue;
+    }
+    cout << (l + 1) << "/" << number_of_channels << endl;
   }
-
   //Close the write/read file.
-  //WriteTree->Write();
-  
+  WriteTree->Write();
   WriteFile->Close();
   ReadFile->Close();
 }
@@ -118,7 +96,8 @@ void GainAnalysis::ExtractArea(string PC_Output, string Output_Dir, int Ch){
 void GainAnalysis::SPEFit(string Output_Dir, int Ch){
   printf("SPE analysis***********************************\n");
   //setting up fitting function for SPE
-  int range_low=-50, range_high=500;
+  int range_low=-100, range_high=300;
+
   TF1 *Func0 = new TF1("Func0","TMath::Gaus(x,0,[pedsig],1)");
   TF1 *Func1 = new TF1("Func1","TMath::Gaus(x,[spemean],sqrt([spesig]*[spesig]+[pedsig]*[pedsig]),1)",range_low, range_high);
   TF1 *Func2 = new TF1("Func2","TMath::Gaus(x,[spemean]*2,sqrt(2*[spesig]*[spesig]+[pedsig]*[pedsig]),1)",range_low, range_high);
@@ -156,24 +135,32 @@ void GainAnalysis::SPEFit(string Output_Dir, int Ch){
 
   //Read in root File and extracted the area branch and separate it
   TFile *ReadFile = TFile::Open(AreaCHName.c_str(),"READ");
-  TFile *WriteFile = new TFile(HistoFileName.c_str(),"RECREATE");
+  TTree *ReadTree = (TTree*)ReadFile->Get("DATA");
 
+  TFile *WriteFile = new TFile(HistoFileName.c_str(),"RECREATE");
+  TTree *WriteTree = new TTree("FittedArea","");
+    
+  int n = ReadTree->GetEntries();
   int nchannels = Ch-1;
 
-  ofstream MOF, FittedOccu;
+  ofstream MOF;
   MOF.open("GMean.txt");
-  FittedOccu.open("FittedOccu.txt");
- 
-  TH1F *call_his ;
+
+
   //loop through the extracted area data, store it into a histogram to perform fitting.
   float area_pulse;  
   for(int k = 0; k < nchannels; k++){
+    ostringstream areabranch, histo;
+    areabranch << "areac" << k;
+    string areabranchname = areabranch.str();
+    ReadTree->SetBranchAddress(areabranchname.c_str(), &area_pulse);
 
-    ostringstream his;
-    his << "his" << k;
-    string hisname = his.str();
-    
-    ReadFile->GetObject(hisname.c_str(),call_his);
+    //Begin Filling Histogram with respected branch
+    TH1F *histogram_pulse = new TH1F("","",300,range_low,range_high); //500,-100,300
+    for(int i = 0; i < n; i++){
+      ReadTree->GetEntry(i);
+      histogram_pulse->Fill(area_pulse);
+    }
     //Set initial parameter for fitting
     spectrumFunc->SetParameter(i_spesig,25);
     spectrumFunc->SetParameter(i_spemean,50);    
@@ -183,30 +170,26 @@ void GainAnalysis::SPEFit(string Output_Dir, int Ch){
     spectrumFunc->SetParameter(i_decay,25);
 
     //setting axis and begin fitting
-    call_his->SetAxisRange(range_low,range_high);
-    call_his->Fit("spectrumFunc");
+    histogram_pulse->SetAxisRange(range_low,range_high);
+    histogram_pulse->Fit("spectrumFunc");
 
 /*
     histo << Output_Dir << "Fitted_Pulse_PMT_" << k << "_.pdf";
     string histoname = histo.str(); 
     histogram_pulse->SaveAs(histoname.c_str());
+    histogram_pulse->Write();
 */
-    call_his->Write();
-
     //extract fitting parameters
-    TF1 *fit1 = call_his->GetFunction("spectrumFunc");
+    TF1 *fit1 = histogram_pulse->GetFunction("spectrumFunc");
     double mean_gauss = fit1->GetParameter(i_spemean);
     double sigma_gauss = fit1->GetParameter(i_spesig);
-    double occuOut = fit1->GetParameter(i_occu);
     MOF << mean_gauss << endl;
-    FittedOccu << occuOut << endl;
 
   }
   WriteFile->Write();
   WriteFile->Close();
   ReadFile->Close();
   MOF.close();
-  FittedOccu.close();
 }
 
 //calculate PMTGain
@@ -244,14 +227,12 @@ void GainAnalysis::CalcGain(string Output_Dir){
   ReadFile.close();
 
   //path to oputput to output directory
-  ostringstream StoreMeanOutput, StorePMTGain, StoreFittedOccu;
+  ostringstream StoreMeanOutput, StorePMTGain;
   StoreMeanOutput << "mv GMean.txt " << Output_Dir; 
   StorePMTGain << "mv PMTGain.txt " << Output_Dir;
-  StoreFittedOccu << "mv FittedOccu.txt " << Output_Dir;
   string StoreMeanOutputName = StoreMeanOutput.str();
   string StorePMTGainName = StorePMTGain.str();
-  string StoreFittedOccuName = StoreFittedOccu.str();
+
   system(StoreMeanOutputName.c_str());
   system(StorePMTGainName.c_str());
-  system(StoreFittedOccuName.c_str());
 }
