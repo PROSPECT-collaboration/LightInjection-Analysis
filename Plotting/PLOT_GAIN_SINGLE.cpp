@@ -75,7 +75,7 @@ void PLOT_GAIN_SINGLE()
     
     TFile* WriteFile = new TFile("GAIN.root","RECREATE");
     TTree* WriteTree = new TTree("GAIN","");
-    TH1F* h1 = new TH1F("","",100,3.6658e6,3.6664e6);
+    TH1F* h1 = new TH1F("","",100,2.0e6,4.0e6);
     
     //gaindiff is an error percentage with respect to the first file
     for(int i = 0; i < number_of_channels; i++)
@@ -94,7 +94,7 @@ void PLOT_GAIN_SINGLE()
     graph->GetXaxis()->SetTitle("Channel");
     graph->GetYaxis()->SetTitle("Gain");
     graph->GetXaxis()->SetLimits(0,number_of_channels - 1);
-    graph->GetYaxis()->SetRangeUser(3.6658e6,3.6664e6);
+    graph->GetYaxis()->SetRangeUser(4.0e6,3.0e6);
     graph->SetMarkerStyle(8);
     graph->SetDrawOption("P");
     graph->Draw("AP");
