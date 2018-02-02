@@ -60,15 +60,9 @@ void GainAnalysis::ExtractArea(string PC_Output, string Output_Dir, int Ch){
     //if (evtmap == evtprev) flag = 1 ;                   //if the next event is equal to the previous event flag = 1.
     if ((evtmap == evtprev) && (Dmap == -100)) continue;  //Get rid of repeating -100 Ch
   }
-  Dmap = 0;
-  evtmap = 0;
-  int w = 0;
-  int counter =0;
-  int range_low=-50, range_high=500;
-  TH1F *Areahis;
-  //EXTRACT SPE PARAMETERS
-  //Create all fillable histogram for each channel
-  //Change l range to that it would match the PMT of interest
+  //Create n amount of histogram corresponding to number of PMT to be fill by SPE Pulse Integrated Area
+  int range_low=-50, range_high=500;         //I think this could be move to constructor of the class...
+  TH1F *Areahis[number_of_channels];
   for(int l = 0; l < number_of_channels; l++) {
     ostringstream areabranch;
     areabranch << "areac" << l;
@@ -76,39 +70,37 @@ void GainAnalysis::ExtractArea(string PC_Output, string Output_Dir, int Ch){
     ostringstream his;
     his << "his" << l;
     string hisname = his.str();
-
-    Areahis = new TH1F(hisname.c_str(),areabranchname.c_str(),100,range_low,range_high);
-    cout << "Begin Processing Events for Ch: " << l << endl;
-    cout << "[";
-    for(int j = 0; j < n; j++) {
-      ReadTree->GetEntry(j);
-<<<<<<< HEAD
-=======
-
-        //Look for SPE trigger (Filter System) (NOTE: Change this part for AD1)
-      evtmap = event;
->>>>>>> origin/master
-      Dmap = detector;
-      evtmap = event;
-      
-      if (Pulse[w] == evtmap) {
-        if(Dmap == l) {
-          //cout << Dmap << " " << A << endl;
-          A = area;
-          Areahis->Fill(A);
-          w++;
-          cout << "*";
-        } else continue;
-      } 
-    }      
-    Areahis->Write();
-    w = 0;
-    cout << "]" << endl;
-    cout << (l) << "/" << number_of_channels << endl;
+    Areahis[l] = new TH1F(hisname.c_str(),areabranchname.c_str(),100,range_low,range_high);
   }
-
-  //Close the write/read file.
-  //WriteTree->Write();
+  //Begin Filtering Events to its respected PMT
+  cout << "Begin Processing Run Event\n[";
+  Dmap = 0;
+  evtmap = 0;
+  int w = 0;
+  int counter =0;
+  int traceback = 0;
+  for(int j = 0; j < n; j++) {
+    ReadTree->GetEntry(j);
+    evtmap = event;
+    Dmap = detector;
+    evtmap = event;
+    A = area;
+    if ((Dmap != -100) && (Pulse[w] == evtmap)) Areahis[Dmap]->Fill(A);  //If channel isn't -100
+    else if (Pulse[w] < evtmap){
+      w++;
+      traceback +=1;
+      if (Pulse[w] == evtmap) {
+        j = j - traceback;
+        traceback = 0;
+      }
+    } else continue;
+    if (j%1000000==0) cout << "*";  //Sent Wright a Printout so that it doesnt kick you out
+  } 
+  cout << "]" <<endl;
+  for(int m = 0; m < number_of_channels; m++) {     
+    Areahis[m]->Write();
+    cout << "Finished Processing Channel: " << m << " of " << number_of_channels << endl;
+  }
   
   WriteFile->Close();
   ReadFile->Close();
@@ -163,14 +155,15 @@ void GainAnalysis::SPEFit(string Output_Dir, int Ch){
   ofstream MOF, FittedOccu;
   MOF.open("GMean.txt");
   FittedOccu.open("FittedOccu.txt");
- 
-  TH1F *call_his ;
+  ostringstream histo;
+
   //loop through the extracted area data, store it into a histogram to perform fitting.
+  TH1F *call_his ;
   float area_pulse;  
   for(int k = 0; k < nchannels; k++){
-
+    TCanvas* c1 = new TCanvas();
     ostringstream his;
-    his << "his" << k;
+    his << "his" << k;				
     string hisname = his.str();
     
     ReadFile->GetObject(hisname.c_str(),call_his);
@@ -185,13 +178,16 @@ void GainAnalysis::SPEFit(string Output_Dir, int Ch){
     //setting axis and begin fitting
     call_his->SetAxisRange(range_low,range_high);
     call_his->Fit("spectrumFunc");
-
-/*
-    histo << Output_Dir << "Fitted_Pulse_PMT_" << k << "_.pdf";
-    string histoname = histo.str(); 
-    histogram_pulse->SaveAs(histoname.c_str());
-*/
     call_his->Write();
+
+    //output .pdf of fitted histogram
+    histo << Output_Dir << "PMT_" << k << "_.pdf";  
+    string histoname = histo.str(); 
+    call_his->Draw();
+    c1->SaveAs(histoname.c_str());
+    histo.str("");
+    histo.clear();
+
 
     //extract fitting parameters
     TF1 *fit1 = call_his->GetFunction("spectrumFunc");
@@ -199,7 +195,7 @@ void GainAnalysis::SPEFit(string Output_Dir, int Ch){
     double sigma_gauss = fit1->GetParameter(i_spesig);
     double occuOut = fit1->GetParameter(i_occu);
     MOF << mean_gauss << endl;
-    FittedOccu << occuOut << endl;
+    FittedOccu << "PMT: " << k << " Occupancy: " << occuOut << endl;
 
   }
   WriteFile->Write();

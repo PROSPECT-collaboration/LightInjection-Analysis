@@ -5,9 +5,9 @@
 # <Location of Convertor> <Location of .h5>
 all:
 	#Execute PulseCruncher
-	~/MPMAnalysis/V5/PROSPECT2x_Analysis/PulseCruncher/./PulseCruncher ~/LightInjection-Analysis/GainAnalysis/LI_PulseCruncher.cfg /projects/prospect/converted_data/Unpacked/DryCommissioning/series010/s010_f00002_ts1515864650_Unpacked.root ~/LightInjection-Analysis/OCS/series010/-11.0V/s010_f00002_ts1515864650_OCS_R3.h5;
+	~/MPMAnalysis/V5/PROSPECT2x_Analysis/PulseCruncher/./PulseCruncher ~/LightInjection-Analysis/GainAnalysis/LI_PulseCruncher.cfg /projects/prospect/converted_data/Unpacked/DryCommissioning/series011/s011_f00004_ts1516033038_Unpacked.root ~/LightInjection-Analysis/OCS/series011/f00004_-13.0_GainOutput/s011_f00004_ts1516033038_OCS.h5;
 
 	#Execute .h5 to .root convertor
-	~/MPMAnalysis/V5/PROSPECT2x_Analysis/Examples/./DetPulse_HDF5_to_ROOT ~/LightInjection-Analysis/OCS/series010/-11.0V/s010_f00002_ts1515864650_OCS_R3.h5;
+	~/MPMAnalysis/V5/PROSPECT2x_Analysis/Examples/./DetPulse_HDF5_to_ROOT ~/LightInjection-Analysis/OCS/series011/f00004_-13.0_GainOutput/s011_f00004_ts1516033038_OCS.h5;
 
     
