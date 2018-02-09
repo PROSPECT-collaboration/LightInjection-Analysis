@@ -40,3 +40,13 @@
   }
 
 ***********************************************************
+
+/*
+ * AMP on SPE Analysis Fitting
+ */
+
+
+//Recreate a fitting function
+  TF1 *spectrumFunc = new TF1("spectrumFunc","([constant]*((1-[amp])*(TMath::Poisson(0,[occu])*Func0 + TMath::Poisson(1,[occu])*Func1 + TMath::Poisson(2,[occu])*Func2 +TMath::Poisson(3,[occu])*Func3+TMath::Poisson(4,[occu])*Func4+TMath::Poisson(5,[occu])*Func5) + [amp]*Func6))", range_low,range_high);
+
+************************************************************

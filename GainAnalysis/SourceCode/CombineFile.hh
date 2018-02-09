@@ -33,6 +33,7 @@ public:
 
   void CreateAoS(string, string);
   void CombinePCOutput(string, int);
+  void RunExtractArea(string, int, int);
   //string String_File() {return File[int]};
 };
 

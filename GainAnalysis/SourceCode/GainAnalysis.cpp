@@ -105,6 +105,101 @@ void GainAnalysis::ExtractArea(string PC_Output, string Output_Dir, int Ch){
   WriteFile->Close();
   ReadFile->Close();
 }
+//This is for combine Voltage
+void GainAnalysis::ExtractAreaR2(string PC_Output, string Output_Dir, TFile* WriteFile, int Ch){
+  //Open PCOutput File and called in DetPulse Tree and gets all of its parameters
+  TFile *ReadFile = TFile::Open(PC_Output.c_str());
+  TTree *ReadTree = (TTree*)ReadFile->Get("DetPulse");
+  int n = ReadTree->GetEntries();                        //Get the amount of entries
+  int number_of_channels = Ch;                           //Store the amount of Channels
+  
+  //path to output
+  ostringstream AreaCH;
+  AreaCH << Output_Dir << "/PulseArea.root";
+  string AreaCHName = AreaCH.str();
+  //Create a new Root file and a new tree for refernces
+  WriteFile = TFile::Open(AreaCHName.c_str(),"UPDATE");
+  //Declare a sample with an array corresponding to the amount of values in that array.
+  //Set the array to the branch of interested.
+  float area=0;
+  float baseline=0;
+  int detector=0;
+  Long64_t event=0;
+  ReadTree->SetBranchAddress("a", &area);
+  ReadTree->SetBranchAddress("b", &baseline);
+  ReadTree->SetBranchAddress("det", &detector);
+  ReadTree->SetBranchAddress("evt", &event);
+
+  //Create values to store the historgram array
+  float A;
+
+  //declaration of variables to locate spe trigger
+  Long64_t evtmap=0, evtprev=0;
+  float Amap=0;
+  int Dmap=0;
+
+
+  //create a flag one of events (Filtering Flag system)
+  //THis is map to PulseCruncher output. Change this is PulseCruncher change somehow... always a good a idea to look at the .h5 files first
+
+  vector<long> Pulse;                           //initialize a trigger array
+  for (int p = 0; p < n; p++){                  //loop through each events in the file
+    ReadTree->GetEntry(p);             
+    evtmap = event;
+    Dmap = detector;
+    if (Dmap == -100) {                         //run to each set of PMT event to locate a counter, add a counter to Remember this event
+      evtprev = evtmap;
+      Pulse.push_back(event);
+      cout << Pulse.back() << endl;
+    }
+    //self-checking module 
+    //if (evtmap == evtprev) flag = 1 ;                   //if the next event is equal to the previous event flag = 1.
+    if ((evtmap == evtprev) && (Dmap == -100)) continue;  //Get rid of repeating -100 Ch
+  }
+  //Create n amount of histogram corresponding to number of PMT to be fill by SPE Pulse Integrated Area
+  int range_low=-50, range_high=500;         //I think this could be move to constructor of the class...
+  TH1F *Areahis[number_of_channels];
+  for(int l = 0; l < number_of_channels; l++) {
+    ostringstream areabranch;
+    areabranch << "areac" << l;
+    string areabranchname = areabranch.str();
+    ostringstream his;
+    his << "his" << l;
+    string hisname = his.str();
+    Areahis[l] = new TH1F(hisname.c_str(),areabranchname.c_str(),100,range_low,range_high);
+  }
+  //Begin Filtering Events to its respected PMT
+  cout << "Begin Processing Run Event\n[";
+  Dmap = 0;
+  evtmap = 0;
+  int w = 0;
+  int counter =0;
+  int traceback = 0;
+  for(int j = 0; j < n; j++) {
+    ReadTree->GetEntry(j);
+    evtmap = event;
+    Dmap = detector;
+    evtmap = event;
+    A = area;
+    if ((Dmap != -100) && (Pulse[w] == evtmap)) Areahis[Dmap]->Fill(A);  //If channel isn't -100
+    else if (Pulse[w] < evtmap){
+      w++;
+      traceback +=1;
+      if (Pulse[w] == evtmap) {
+        j = j - traceback;
+        traceback = 0;
+      }
+    } else continue;
+    if (j%1000000==0) cout << "*";  //Sent Wright a Printout so that it doesnt kick you out
+  } 
+  cout << "]" <<endl;
+  for(int m = 0; m < number_of_channels; m++) {    
+    if (Areahis[m]->GetEntries() != 0) Areahis[m]->Write();
+    cout << "Finished Processing Channel: " << m << " of " << number_of_channels << endl;
+  }
+  WriteFile->Close();
+  ReadFile->Close();
+}
 
 //Area Branch Fitting Module
 void GainAnalysis::SPEFit(string Output_Dir, int Ch){
@@ -120,7 +215,7 @@ void GainAnalysis::SPEFit(string Output_Dir, int Ch){
   TF1 *Func6 = new TF1("Func6","(x>0)/[decay]*TMath::Exp(-1.0*x/[decay]*(x>0))",range_low, range_high);
 
   //Recreate a fitting function
-  TF1 *spectrumFunc = new TF1("spectrumFunc","([constant]*((1-[amp])*(TMath::Poisson(0,[occu])*Func0 + TMath::Poisson(1,[occu])*Func1 + TMath::Poisson(2,[occu])*Func2 +TMath::Poisson(3,[occu])*Func3+TMath::Poisson(4,[occu])*Func4+TMath::Poisson(5,[occu])*Func5) + [amp]*Func6))", range_low,range_high);
+  TF1 *spectrumFunc = new TF1("spectrumFunc","([constant]*(TMath::Poisson(0,[occu])*Func0 + TMath::Poisson(1,[occu])*Func1 + TMath::Poisson(2,[occu])*Func2 +TMath::Poisson(3,[occu])*Func3+TMath::Poisson(4,[occu])*Func4+TMath::Poisson(5,[occu])*Func5) + Func6)", range_low,range_high);
 
   //Extract pertient values from fitting function and set their limit
   float i_spesig = spectrumFunc->GetParNumber("spesig");
@@ -128,14 +223,14 @@ void GainAnalysis::SPEFit(string Output_Dir, int Ch){
   float i_spemean= spectrumFunc->GetParNumber("spemean");
   float i_occu = spectrumFunc->GetParNumber("occu");
   float i_constant = spectrumFunc->GetParNumber("constant");
-  float i_amp = spectrumFunc->GetParNumber("amp");
+  //float i_amp = spectrumFunc->GetParNumber("amp");
   float i_decay = spectrumFunc->GetParNumber("decay");
   assert(i_spesig>=0);assert(i_pedsig>=0);assert(i_spemean>=0);assert(i_occu>=0);
   spectrumFunc->SetParLimits(i_spesig,0,50);
   spectrumFunc->SetParLimits(i_spemean,0,150);
   spectrumFunc->SetParLimits(i_pedsig,5,20);
   spectrumFunc->SetParLimits(i_occu,0,5);
-  spectrumFunc->SetParLimits(i_amp,0,1);
+  //spectrumFunc->SetParLimits(i_amp,0,1);
   spectrumFunc->SetParLimits(i_decay,0,250);
 
   //path to oputput
@@ -151,7 +246,6 @@ void GainAnalysis::SPEFit(string Output_Dir, int Ch){
   TFile *WriteFile = new TFile(HistoFileName.c_str(),"RECREATE");
 
   int nchannels = Ch-1;
-
   ofstream MOF, FittedOccu;
   MOF.open("GMean.txt");
   FittedOccu.open("FittedOccu.txt");
@@ -172,7 +266,7 @@ void GainAnalysis::SPEFit(string Output_Dir, int Ch){
     spectrumFunc->SetParameter(i_spemean,50);    
     spectrumFunc->SetParameter(i_pedsig,20);
     spectrumFunc->SetParameter(i_occu,1);
-    spectrumFunc->SetParameter(i_amp,0.5);
+    //spectrumFunc->SetParameter(i_amp,0);
     spectrumFunc->SetParameter(i_decay,25);
 
     //setting axis and begin fitting
@@ -198,11 +292,12 @@ void GainAnalysis::SPEFit(string Output_Dir, int Ch){
     FittedOccu << "PMT: " << k << " Occupancy: " << occuOut << endl;
 
   }
+  MOF.close();
+  FittedOccu.close();
   WriteFile->Write();
   WriteFile->Close();
   ReadFile->Close();
-  MOF.close();
-  FittedOccu.close();
+
 }
 
 //calculate PMTGain

@@ -1,4 +1,4 @@
-/* LIAnalysis
+/* LIAnalysi
  * Date Created: Aug 28, 2017
  * Date Modified: Dec 17, 2017
  */
@@ -14,7 +14,7 @@
 int main(int argc, char** argv) {
   //program fail if arguments are incorrect.
   if(argc < 3) {
-    printf("Arguments: <Output_Dir> <Number of Channel> <y or n>");
+    printf("Arguments: <Output_Dir> <Number of Channel> <y or n or dV>");
     return EXIT_FAILURE;
   }
 
@@ -31,8 +31,8 @@ int main(int argc, char** argv) {
 
   //if yes then combine file and proceed through GainAnalysis
   if (CA == "y") {
-    cout << "How man Files are in FileCombineList.txt?: ";
-    cin  >> NoC;
+    cout << "How many Files are in FileCombineList.txt?: ";
+    cin >> NoC;
     //Combine Files
     CombineFile COB;
     string AddFile = "FileCombineList.txt";
@@ -46,20 +46,42 @@ int main(int argc, char** argv) {
     //Run Gain Analysis
     GainAnalysis Gain;
     Gain.ExtractArea(AddDirName.c_str(), Output_Dir, iCH);
+
+    //Open File to write PMT Gain and Occupancy
+
+   
     Gain.SPEFit(Output_Dir, iCH);
+
     Gain.CalcGain(Output_Dir);
   } 
+  //Run A single File
   else if (CA == "n") {
     cout << "Input Pulse Crunched File Name: ";
     cin >> GainAFile;
     //Read Files
     //Name a File in the output directory
-
     AddDir << Output_Dir << GainAFile;
     AddDirName = AddDir.str();
     //Run Gain Analysis
     GainAnalysis Gain;
     Gain.ExtractArea(AddDirName.c_str(), Output_Dir, iCH);
+    //Open File to write PMT Gain and Occupancy
+
+    Gain.SPEFit(Output_Dir, iCH);
+
+    Gain.CalcGain(Output_Dir);
+
+
+  }
+  //Run Multiple Different Voltage File
+  else if (CA == "dV") {
+    cout << "How many Files are in DifferentVoltRun.txt?: ";
+    cin >> NoC;
+    CombineFile COB;
+    string AddFile = "DifferentVoltRun.txt";
+    COB.CreateAoS(Output_Dir, AddFile);
+    COB.RunExtractArea(Output_Dir, NoC, iCH);
+    GainAnalysis Gain;
     Gain.SPEFit(Output_Dir, iCH);
     Gain.CalcGain(Output_Dir);
   }

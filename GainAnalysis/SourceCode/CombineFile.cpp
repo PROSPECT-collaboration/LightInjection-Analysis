@@ -6,6 +6,7 @@
  */
 
 #include "CombineFile.hh"
+#include "GainAnalysis.hh"
 //Create array of string
 void CombineFile::CreateAoS(string Output_Dir, string AddFile) {
   //open .txt file containing a list of file to combine
@@ -25,7 +26,7 @@ void CombineFile::CreateAoS(string Output_Dir, string AddFile) {
     AddDir.str("");
     AddDir.clear();
     cout << "processing: " << File[i] << endl;
-    i++;    
+    i++;
   }
 }
 
@@ -103,7 +104,23 @@ void CombineFile::CombinePCOutput(string Output_Dir, int noF){
   WriteFile->Close();
 }
 
-
+void CombineFile::RunExtractArea(string Output_Dir, int noF, int Ch){
+  GainAnalysis EA;
+  //path to output
+  ostringstream AreaCH;
+  AreaCH << Output_Dir << "/PulseArea.root";
+  string AreaCHName = AreaCH.str();
+  //Create a new Root file and a new tree for refernces
+  TFile *WriteFile = new TFile(AreaCHName.c_str(),"RECREATE");
+  WriteFile->Close();
+  //TTree *WriteTree = new TTree("DATA","");
+  //WriteTree->SetEntries(n/(number_of_channels-1));      //Ignore Trigger Channel
+  for(int i = 0; i < noF ; i++){
+    string A = File[i].c_str();
+    EA.ExtractAreaR2(A, Output_Dir, WriteFile, Ch);
+    A = "";
+  }
+}
 
 
 

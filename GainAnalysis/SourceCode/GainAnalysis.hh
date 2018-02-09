@@ -32,6 +32,8 @@ class GainAnalysis{
 public:
   //Isolate area branch from DetPulse Tree of PulseCruncher Output
   void ExtractArea(string, string, int);
+  //For Combine File Run
+  void ExtractAreaR2(string, string, TFile*, int);
   //Run Fitting Function through area branch to obtain SPEMean
   void SPEFit(string, int);
   //Calculate PMTGain from obtained SPEMean
