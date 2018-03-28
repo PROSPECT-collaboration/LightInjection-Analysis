@@ -1,0 +1,27 @@
+{
+//========= Macro generated from object: his1000/areac1000
+//========= by ROOT version6.11/01
+   
+   TH1F *his1000__1 = new TH1F("his1000__1","areac1000",100,-50,500);
+   his1000__1->SetBinContent(0,2);
+   his1000__1->SetEntries(2);
+
+   Int_t ci;      // for color index setting
+   TColor *color; // for color definition with alpha
+   ci = TColor::GetColor("#000099");
+   his1000__1->SetLineColor(ci);
+   his1000__1->GetXaxis()->SetLabelFont(42);
+   his1000__1->GetXaxis()->SetLabelSize(0.035);
+   his1000__1->GetXaxis()->SetTitleSize(0.035);
+   his1000__1->GetXaxis()->SetTitleFont(42);
+   his1000__1->GetYaxis()->SetLabelFont(42);
+   his1000__1->GetYaxis()->SetLabelSize(0.035);
+   his1000__1->GetYaxis()->SetTitleSize(0.035);
+   his1000__1->GetYaxis()->SetTitleOffset(0);
+   his1000__1->GetYaxis()->SetTitleFont(42);
+   his1000__1->GetZaxis()->SetLabelFont(42);
+   his1000__1->GetZaxis()->SetLabelSize(0.035);
+   his1000__1->GetZaxis()->SetTitleSize(0.035);
+   his1000__1->GetZaxis()->SetTitleFont(42);
+   his1000__1->Draw("");
+}

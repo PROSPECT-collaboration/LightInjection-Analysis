@@ -208,10 +208,10 @@ void GainAnalysis::SPEFit(string Output_Dir, int Ch){
   int range_low=-50, range_high=500;
   TF1 *Func0 = new TF1("Func0","TMath::Gaus(x,[pedmean],[pedsig],1)");
   TF1 *Func1 = new TF1("Func1","TMath::Gaus(x,[pedmean]+[spemean],sqrt([spesig]*[spesig]+[pedsig]*[pedsig]),1)",range_low, range_high);
-  TF1 *Func2 = new TF1("Func2","TMath::Gaus(x,([pedmean]+[spemean])*2,sqrt(2*[spesig]*[spesig]+[pedsig]*[pedsig]),1)",range_low, range_high);
-  TF1 *Func3 = new TF1("Func3","TMath::Gaus(x,([pedmean]+[spemean])*3,sqrt(3*[spesig]*[spesig]+[pedsig]*[pedsig]),1)",range_low, range_high);
-  TF1 *Func4 = new TF1("Func4","TMath::Gaus(x,([pedmean]+[spemean])*4,sqrt(4*[spesig]*[spesig]+[pedsig]*[pedsig]),1)",range_low, range_high);
-  TF1 *Func5 = new TF1("Func5","TMath::Gaus(x,([pedmean]+[spemean])*5,sqrt(5*[spesig]*[spesig]+[pedsig]*[pedsig]),1)",range_low, range_high);
+  TF1 *Func2 = new TF1("Func2","TMath::Gaus(x,[pedmean]+[spemean]*2,sqrt(2*[spesig]*[spesig]+[pedsig]*[pedsig]),1)",range_low, range_high);
+  TF1 *Func3 = new TF1("Func3","TMath::Gaus(x,[pedmean]+[spemean]*3,sqrt(3*[spesig]*[spesig]+[pedsig]*[pedsig]),1)",range_low, range_high);
+  TF1 *Func4 = new TF1("Func4","TMath::Gaus(x,[pedmean]+[spemean]*4,sqrt(4*[spesig]*[spesig]+[pedsig]*[pedsig]),1)",range_low, range_high);
+  TF1 *Func5 = new TF1("Func5","TMath::Gaus(x,[pedmean]+[spemean]*5,sqrt(5*[spesig]*[spesig]+[pedsig]*[pedsig]),1)",range_low, range_high);
   //TF1 *Func6 = new TF1("Func6","(x>0)/[decay]*TMath::Exp(-1.0*x/[decay]*(x>0))",range_low, range_high);
 
   //Recreate a fitting function

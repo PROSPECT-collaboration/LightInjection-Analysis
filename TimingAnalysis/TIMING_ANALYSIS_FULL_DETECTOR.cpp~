@@ -195,7 +195,7 @@ void TIMING_ANALYSIS_FULL_DETECTOR()
         }
     }
     
-    number_of_channels = 311;
+    number_of_channels = 308;
     
     cout << "Number of channels = " << number_of_channels << endl;
     
